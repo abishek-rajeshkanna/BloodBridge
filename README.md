@@ -17,8 +17,8 @@ BloodBridge is a comprehensive web-based blood bank management system designed t
 - [API Documentation](#api-documentation)
 - [Database Schema](#database-schema)
 - [Security](#security)
-- [Contributing](#contributing)
-- [License](#license)
+- [Testing](#testing)
+- [Acknowledgments](#Acknowledgments)
 
 ---
 
