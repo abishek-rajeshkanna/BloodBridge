@@ -19,6 +19,7 @@ BloodBridge is a comprehensive web-based blood bank management system designed t
 - [Security](#security)
 - [Testing](#testing)
 - [Acknowledgments](#Acknowledgments)
+- [Screenshots](#Screenshots)
 
 ---
 
@@ -761,7 +762,54 @@ https://github.com/abishek-rajeshkanna
 
 ## Acknowledgments
 
-- Blood type compatibility matrix based on medical standards
+- Blood type compatibility based on medical standards
 - Flask documentation and community
 - PostgreSQL documentation
-- All contributors and testers
+
+---
+
+## Screenshots
+
+Home Page
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194023" src="https://github.com/user-attachments/assets/a818f05d-0f8c-4553-bb16-9d22e13a9947" />
+
+Register
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194040" src="https://github.com/user-attachments/assets/c1c38b9f-f990-49fc-8269-8fc3f5ca4841" />
+
+Login
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194054" src="https://github.com/user-attachments/assets/ef3871da-73e5-4d48-8d05-9e2e7589691a" />
+
+Admin Dashboard
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194508" src="https://github.com/user-attachments/assets/2c240ebf-817f-46c0-be51-8e7b18ef667e" />
+
+User Management
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194527" src="https://github.com/user-attachments/assets/14038d3d-ce61-4465-88d8-412141ff62c2" />
+
+Blood Inventory Management
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194541" src="https://github.com/user-attachments/assets/a02a0a7a-deed-4e58-a823-af4607c795a6" />
+
+Donor Dashboard
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194154" src="https://github.com/user-attachments/assets/0d0edd36-1de6-476d-94b3-0b0edd060567" />
+
+Donate Blood
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194214" src="https://github.com/user-attachments/assets/cc3a659f-27f8-4adf-8305-2a6edbb3339e" />
+
+Donation History
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194230" src="https://github.com/user-attachments/assets/69ce7cdd-6e4e-48ea-88e2-1b2a58bdb2d3" />
+
+Receiver Dashboard
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194317" src="https://github.com/user-attachments/assets/8626ef02-dd3d-48a7-8a83-0a0565859587" />
+
+Request Blood
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194335" src="https://github.com/user-attachments/assets/2744b68f-9e8d-4131-9e26-7e74e701ab34" />
+
+Request History
+<img width="1920" height="1020" alt="Screenshot 2025-11-22 194348" src="https://github.com/user-attachments/assets/d4ad109a-26c7-4888-9dd8-2aeccfd1aa27" />
+
+
+
+
+
+
+
+
