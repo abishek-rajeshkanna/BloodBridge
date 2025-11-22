@@ -151,8 +151,8 @@ Before installation, ensure you have the following installed:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/bloodbridge.git
-cd bloodbridge
+git clone https://github.com/abishek-rajeshkanna/BloodBridge.git
+cd BloodBridge
 ```
 
 ### Step 2: Database Setup
