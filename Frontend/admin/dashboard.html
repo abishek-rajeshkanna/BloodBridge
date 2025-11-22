@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="manage_users.html">Users</a></li>
+                <li><a href="manage_inventory.html">Inventory</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Admin Dashboard 👨‍💼</h1>
+            <p style="color: var(--text-gray);">Manage the blood bank system</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Main Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Donors</div>
+                <div class="stat-number" id="totalDonors">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Receivers</div>
+                <div class="stat-number" id="totalReceivers">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Donations</div>
+                <div class="stat-number" id="totalDonations">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Users</div>
+                <div class="stat-number" id="activeUsers">-</div>
+            </div>
+        </div>
+
+        <!-- Blood Inventory Overview -->
+        <div class="card">
+            <h2 class="card-title">Blood Inventory by Type</h2>
+            <div class="loading" id="inventoryLoading">
+                <div class="spinner"></div>
+            </div>
+            <div id="inventoryGrid" class="dashboard-grid" style="display: none;"></div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">Recent Transactions</h2>
+            <div class="loading" id="transactionsLoading">
+                <div class="spinner"></div>
+            </div>
+            <div class="table-container" id="transactionsTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Donor ID</th>
+                            <th>Receiver ID</th>
+                            <th>Blood Type</th>
+                            <th>Units</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">Quick Actions</h2>
+            <div class="flex gap-10" style="flex-wrap: wrap;">
+                <a href="manage_users.html" class="btn btn-primary">Manage Users</a>
+                <a href="manage_inventory.html" class="btn btn-secondary">Manage Inventory</a>
+                <button class="btn btn-secondary" onclick="refreshData()">Refresh Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('admin');
+
+        const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+        async function loadDashboard() {
+            const result = await apiCall('/admin/dashboard');
+            
+            if (result.ok) {
+                const data = result.data;
+                document.getElementById('totalDonors').textContent = data.total_donors;
+                document.getElementById('totalReceivers').textContent = data.total_receivers;
+                document.getElementById('totalDonations').textContent = data.total_donations;
+                document.getElementById('activeUsers').textContent = data.total_donors + data.total_receivers;
+
+                // Display inventory
+                document.getElementById('inventoryLoading').classList.remove('show');
+                const inventoryGrid = document.getElementById('inventoryGrid');
+                
+                inventoryGrid.innerHTML = bloodTypes.map(type => {
+                    const units = data.inventory[type] || 0;
+                    const color = units > 10 ? '#32CD32' : units > 5 ? '#FFA500' : '#DC143C';
+                    return `
+                        <div class="stat-card">
+                            <div class="stat-label">${type}</div>
+                            <div class="stat-number" style="color: ${color};">${units}</div>
+                            <small style="color: var(--text-gray);">units</small>
+                        </div>
+                    `;
+                }).join('');
+                
+                inventoryGrid.style.display = 'grid';
+            }
+        }
+
+        async function loadTransactions() {
+            const result = await apiCall('/admin/transactions');
+            document.getElementById('transactionsLoading').classList.remove('show');
+            
+            if (result.ok) {
+                const transactions = result.data.slice(0, 10); // Show latest 10
+                const tbody = document.getElementById('transactionsBody');
+                
+                if (transactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No transactions yet</td></tr>';
+                } else {
+                    tbody.innerHTML = transactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.transaction_date).toLocaleDateString()}</td>
+                            <td>${t.donor_id || '-'}</td>
+                            <td>${t.receiver_id || '-'}</td>
+                            <td><span class="blood-badge">${t.blood_type}</span></td>
+                            <td>${t.units}</td>
+                            <td><span class="status-badge status-${t.transaction_type === 'direct' ? 'approved' : 'completed'}">${t.transaction_type}</span></td>
+                        </tr>
+                    `).join('');
+                }
+                
+                document.getElementById('transactionsTable').style.display = 'block';
+            }
+        }
+
+        function refreshData() {
+            showAlert('Refreshing data...', 'info');
+            location.reload();
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => alertDiv.classList.remove('show'), 3000);
+        }
+
+        loadDashboard();
+        loadTransactions();
+    </script>
+</body>
+</html>

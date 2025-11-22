@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receiver Dashboard - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="request_blood.html">Request Blood</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Welcome, <span id="userName"></span>! </h1>
+            <p style="color: var(--text-gray);">Find compatible donors and request blood</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Profile Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Blood Type</div>
+                <div class="stat-number" id="bloodType">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Urgency Level</div>
+                <div class="stat-number" style="font-size: 24px;" id="urgency">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Medical Condition</div>
+                <div class="stat-number" style="font-size: 20px;" id="condition">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Requests Made</div>
+                <div class="stat-number" id="requestCount">0</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2 class="card-title">Quick Actions</h2>
+            <div class="flex gap-10" style="flex-wrap: wrap;">
+                <a href="request.html" class="btn btn-primary">Request Blood</a>
+                <a href="history.html" class="btn btn-secondary">View History</a>
+                <button class="btn btn-secondary" onclick="checkInventory()">Check Inventory</button>
+            </div>
+        </div>
+
+        <!-- Available Inventory -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">Available Blood Inventory</h2>
+            <p style="color: var(--text-gray); margin-bottom: 20px;">
+                Compatible blood types currently available in the blood bank
+            </p>
+            <div class="loading" id="inventoryLoading">
+                <div class="spinner"></div>
+            </div>
+            <div class="table-container" id="inventoryTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Blood Type</th>
+                            <th>Units Available</th>
+                            <th>Collection Date</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryBody"></tbody>
+                </table>
+            </div>
+            <div id="noInventory" style="display: none; text-align: center; padding: 20px;">
+                <p style="color: var(--text-gray);">No compatible blood available in inventory</p>
+            </div>
+        </div>
+
+        <!-- Matching Donors -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">Compatible Donors</h2>
+            <p style="color: var(--text-gray); margin-bottom: 20px;">
+                Donors who can provide blood for your blood type
+            </p>
+            <div class="loading" id="donorsLoading">
+                <div class="spinner"></div>
+            </div>
+            <div class="table-container" id="donorsTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Blood Type</th>
+                            <th>Location</th>
+                            <th>Total Donations</th>
+                            <th>Eligibility</th>
+                        </tr>
+                    </thead>
+                    <tbody id="donorsBody"></tbody>
+                </table>
+            </div>
+            <div id="noDonors" style="display: none; text-align: center; padding: 20px;">
+                <p style="color: var(--text-gray);">No compatible donors found</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('receiver');
+
+        const user = getUser();
+        document.getElementById('userName').textContent = user.full_name;
+
+        async function loadProfile() {
+            const result = await apiCall('/receiver/profile');
+            if (result.ok) {
+                const profile = result.data;
+                document.getElementById('bloodType').textContent = profile.blood_type;
+                document.getElementById('urgency').textContent = profile.urgency_level || 'Not set';
+                document.getElementById('condition').textContent = profile.medical_condition || 'Not specified';
+            }
+        }
+
+        async function checkInventory() {
+            document.getElementById('inventoryLoading').classList.add('show');
+            const result = await apiCall('/receiver/inventory-check');
+            document.getElementById('inventoryLoading').classList.remove('show');
+
+            if (result.ok) {
+                const inventory = result.data;
+                const tbody = document.getElementById('inventoryBody');
+
+                if (inventory.length === 0) {
+                    document.getElementById('noInventory').style.display = 'block';
+                } else {
+                    tbody.innerHTML = inventory.map(inv => `
+                        <tr>
+                            <td><span class="blood-badge">${inv.blood_type}</span></td>
+                            <td>${inv.units_available}</td>
+                            <td>${new Date(inv.collection_date).toLocaleDateString()}</td>
+                            <td>${new Date(inv.expiry_date).toLocaleDateString()}</td>
+                            <td><span class="status-badge status-${inv.status === 'available' ? 'approved' : 'pending'}">${inv.status}</span></td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('inventoryTable').style.display = 'block';
+                }
+            }
+        }
+
+        async function loadDonors() {
+            document.getElementById('donorsLoading').classList.add('show');
+            const result = await apiCall('/receiver/matching-donors');
+            document.getElementById('donorsLoading').classList.remove('show');
+
+            if (result.ok) {
+                const donors = result.data;
+                const tbody = document.getElementById('donorsBody');
+
+                if (donors.length === 0) {
+                    document.getElementById('noDonors').style.display = 'block';
+                } else {
+                    tbody.innerHTML = donors.map(d => `
+                        <tr>
+                            <td><span class="blood-badge">${d.blood_type}</span></td>
+                            <td>${d.city || 'N/A'}, ${d.state || 'N/A'}</td>
+                            <td>${d.total_donations || 0}</td>
+                            <td><span class="status-badge status-${d.is_eligible ? 'approved' : 'pending'}">${d.is_eligible ? 'Eligible' : 'Not Eligible'}</span></td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('donorsTable').style.display = 'block';
+                }
+            }
+        }
+
+        async function loadHistory() {
+            const result = await apiCall('/receiver/history');
+            if (result.ok) {
+                document.getElementById('requestCount').textContent = result.data.length;
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => alertDiv.classList.remove('show'), 5000);
+        }
+
+        loadProfile();
+        checkInventory();
+        loadDonors();
+        loadHistory();
+    </script>
+</body>
+</html>

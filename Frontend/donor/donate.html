@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donate Blood - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="donate.html">Donate Blood</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Donate Blood </h1>
+            <p style="color: var(--text-gray);">Choose how you want to donate</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Eligibility Check -->
+        <div class="card" id="eligibilityCard">
+            <h2 class="card-title">Eligibility Status</h2>
+            <div class="loading" id="eligibilityLoading">
+                <div class="spinner"></div>
+                <p>Checking eligibility...</p>
+            </div>
+            <div id="eligibilityResult" style="display: none;">
+                <p id="eligibilityMessage" style="font-size: 18px; margin-bottom: 20px;"></p>
+            </div>
+        </div>
+
+        <!-- Donation Form -->
+        <div class="form-container" id="donationForm" style="display: none; max-width: 600px;">
+            <h2>Donation Details</h2>
+            
+            <form id="donateForm">
+                <div class="form-group">
+                    <label for="donation_type">Donation Type</label>
+                    <select id="donation_type" name="donation_type" required>
+                        <option value="">Select Type</option>
+                        <option value="inventory">Donate to Blood Bank Inventory</option>
+                        <option value="direct">Direct Donation to Receiver</option>
+                    </select>
+                </div>
+
+                <div id="receiverSection" style="display: none;">
+                    <div class="form-group">
+                        <label for="receiver_id">Select Receiver</label>
+                        <select id="receiver_id" name="receiver_id">
+                            <option value="">Loading receivers...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="units">Number of Units</label>
+                    <input type="number" id="units" name="units" value="1" min="1" max="3" required>
+                    <small style="color: var(--text-gray);">Typically 1 unit = 450ml</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="terms" required>
+                        I confirm that I am in good health and meet all donation requirements
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Complete Donation
+                </button>
+            </form>
+
+            <div class="loading" id="submitLoading">
+                <div class="spinner"></div>
+                <p>Processing donation...</p>
+            </div>
+        </div>
+
+        <!-- Eligible Receivers List -->
+        <div class="card" id="receiversCard" style="display: none; margin-top: 30px;">
+            <h2 class="card-title">Eligible Receivers</h2>
+            <p style="color: var(--text-gray); margin-bottom: 20px;">
+                These people can receive blood from your blood type
+            </p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Blood Type</th>
+                            <th>Location</th>
+                            <th>Urgency</th>
+                            <th>Medical Condition</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiversBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('donor');
+
+        const donationType = document.getElementById('donation_type');
+        const receiverSection = document.getElementById('receiverSection');
+        const donateForm = document.getElementById('donateForm');
+        const submitLoading = document.getElementById('submitLoading');
+
+        // Check eligibility on load
+        async function checkEligibility() {
+            const result = await apiCall('/donor/check-eligibility');
+            document.getElementById('eligibilityLoading').classList.remove('show');
+            document.getElementById('eligibilityResult').style.display = 'block';
+
+            if (result.ok) {
+                const msgEl = document.getElementById('eligibilityMessage');
+                
+                if (result.data.eligible) {
+                    msgEl.innerHTML = `<span style="color: #32CD32; font-size: 24px;">✓</span> ${result.data.message}`;
+                    document.getElementById('donationForm').style.display = 'block';
+                    loadReceivers();
+                } else {
+                    msgEl.innerHTML = `<span style="color: #FFA500; font-size: 24px;">⏱</span> ${result.data.message}`;
+                    msgEl.innerHTML += `<br><small style="color: var(--text-gray);">You can donate again after ${result.data.days_remaining} days</small>`;
+                }
+            }
+        }
+
+        // Load eligible receivers
+        async function loadReceivers() {
+            const result = await apiCall('/donor/eligible-receivers');
+            if (result.ok) {
+                const receivers = result.data;
+                const select = document.getElementById('receiver_id');
+                const tbody = document.getElementById('receiversBody');
+
+                if (receivers.length > 0) {
+                    // Populate select dropdown
+                    select.innerHTML = '<option value="">Select a receiver</option>' +
+                        receivers.map(r => `<option value="${r.receiver_id}">${r.full_name} - ${r.blood_type} (${r.urgency_level})</option>`).join('');
+
+                    // Populate table
+                    tbody.innerHTML = receivers.map(r => `
+                        <tr>
+                            <td>${r.full_name || 'Anonymous'}</td>
+                            <td><span class="blood-badge">${r.blood_type}</span></td>
+                            <td>${r.city || 'N/A'}, ${r.state || 'N/A'}</td>
+                            <td><span class="status-badge status-${r.urgency_level}">${r.urgency_level}</span></td>
+                            <td>${r.medical_condition || 'Not specified'}</td>
+                        </tr>
+                    `).join('');
+
+                    document.getElementById('receiversCard').style.display = 'block';
+                }
+            }
+        }
+
+        // Show/hide receiver selection
+        donationType.addEventListener('change', (e) => {
+            if (e.target.value === 'direct') {
+                receiverSection.style.display = 'block';
+                document.getElementById('receiver_id').required = true;
+            } else {
+                receiverSection.style.display = 'none';
+                document.getElementById('receiver_id').required = false;
+            }
+        });
+
+        // Handle form submission
+        donateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                donation_type: document.getElementById('donation_type').value,
+                units: parseInt(document.getElementById('units').value)
+            };
+
+            if (formData.donation_type === 'direct') {
+                formData.receiver_id = parseInt(document.getElementById('receiver_id').value);
+                if (!formData.receiver_id) {
+                    showAlert('Please select a receiver', 'error');
+                    return;
+                }
+            }
+
+            donateForm.style.display = 'none';
+            submitLoading.classList.add('show');
+
+            const result = await apiCall('/donor/donate', 'POST', formData);
+
+            submitLoading.classList.remove('show');
+            donateForm.style.display = 'block';
+
+            if (result.ok) {
+                showAlert('Donation recorded successfully! Thank you for saving lives! ', 'success');
+                setTimeout(() => {
+                    window.location.href = 'history.html';
+                }, 2000);
+            } else {
+                showAlert(result.data.error || 'Donation failed', 'error');
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => alertDiv.classList.remove('show'), 5000);
+        }
+
+        // Check URL for receiver_id parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const receiverId = urlParams.get('receiver_id');
+        if (receiverId) {
+            document.getElementById('donation_type').value = 'direct';
+            receiverSection.style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('receiver_id').value = receiverId;
+            }, 500);
+        }
+
+        checkEligibility();
+    </script>
+</body>
+</html>

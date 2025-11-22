@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="donate.html">Donate Blood</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Welcome, <span id="userName"></span></h1>
+            <p style="color: var(--text-gray);">Thank you for being a life-saver</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Blood Type</div>
+                <div class="stat-number" id="bloodType">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Donations</div>
+                <div class="stat-number" id="totalDonations">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Donation</div>
+                <div class="stat-number" style="font-size: 24px;" id="lastDonation">Never</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Eligibility Status</div>
+                <div class="stat-number" style="font-size: 24px;" id="eligibility">Checking...</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2 class="card-title">Quick Actions</h2>
+            <div class="flex gap-10" style="flex-wrap: wrap;">
+                <a href="donate.html" class="btn btn-primary">Donate Blood</a>
+                <a href="history.html" class="btn btn-secondary">View History</a>
+                <button class="btn btn-secondary" onclick="checkEligibility()">Check Eligibility</button>
+            </div>
+        </div>
+
+        <!-- Eligible Receivers -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">People Who Can Receive From You</h2>
+            <div class="loading" id="receiversLoading">
+                <div class="spinner"></div>
+            </div>
+            <div class="table-container" id="receiversTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Blood Type</th>
+                            <th>Location</th>
+                            <th>Urgency</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiversBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('donor');
+
+        const user = getUser();
+        document.getElementById('userName').textContent = user.full_name;
+
+        async function loadProfile() {
+            const result = await apiCall('/donor/profile');
+            if (result.ok) {
+                const profile = result.data;
+                document.getElementById('bloodType').textContent = profile.blood_type;
+                document.getElementById('totalDonations').textContent = profile.total_donations || 0;
+                document.getElementById('lastDonation').textContent = profile.last_donation_date || 'Never';
+            }
+        }
+
+        async function checkEligibility() {
+            const result = await apiCall('/donor/check-eligibility');
+            if (result.ok) {
+                const eligibilityEl = document.getElementById('eligibility');
+                if (result.data.eligible) {
+                    eligibilityEl.textContent = '✓ Eligible';
+                    eligibilityEl.style.color = '#32CD32';
+                    showAlert('You are eligible to donate!', 'success');
+                } else {
+                    eligibilityEl.textContent = `${result.data.days_remaining} days left`;
+                    eligibilityEl.style.color = '#FFA500';
+                    showAlert(result.data.message, 'info');
+                }
+            }
+        }
+
+        async function loadReceivers() {
+            document.getElementById('receiversLoading').classList.add('show');
+            const result = await apiCall('/donor/eligible-receivers');
+            document.getElementById('receiversLoading').classList.remove('show');
+            
+            if (result.ok) {
+                const receivers = result.data;
+                const tbody = document.getElementById('receiversBody');
+                
+                if (receivers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No receivers found</td></tr>';
+                } else {
+                    tbody.innerHTML = receivers.map(r => `
+                        <tr>
+                            <td>${r.full_name || 'Anonymous'}</td>
+                            <td><span class="blood-badge">${r.blood_type}</span></td>
+                            <td>${r.city || 'N/A'}, ${r.state || 'N/A'}</td>
+                            <td><span class="status-badge status-${r.urgency_level}">${r.urgency_level}</span></td>
+                            <td><a href="donate.html?receiver_id=${r.receiver_id}" class="btn btn-primary" style="padding: 5px 15px;">Donate</a></td>
+                        </tr>
+                    `).join('');
+                }
+                
+                document.getElementById('receiversTable').style.display = 'block';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => alertDiv.classList.remove('show'), 5000);
+        }
+
+        // Load data
+        loadProfile();
+        checkEligibility();
+        loadReceivers();
+    </script>
+</body>
+</html>

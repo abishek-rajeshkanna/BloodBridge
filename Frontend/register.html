@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - BloodBridge</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="register.html">Register</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Create Account</h2>
+            
+            <div id="alert" class="alert"></div>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="role">I am a</label>
+                    <select id="role" name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="donor">Donor</option>
+                        <option value="receiver">Receiver</option>
+                    </select>
+                </div>
+            
+            
+
+                <div class="form-group">
+                    <label for="full_name">Full Name</label>
+                    <input type="text" id="full_name" name="full_name" required placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Create a password">
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="Enter your phone number">
+                </div>
+
+                <div class="form-group">
+                    <label for="blood_type">Blood Type</label>
+                    <select id="blood_type" name="blood_type" required>
+                        <option value="">Select Blood Type</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" id="city" name="city" required placeholder="Enter your city">
+                </div>
+
+                <div class="form-group">
+                    <label for="state">State</label>
+                    <input type="text" id="state" name="state" required placeholder="Enter your state">
+                </div>
+
+                <div id="donorFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="weight">Weight (kg)</label>
+                        <input type="number" id="weight" name="weight" step="0.1" placeholder="Enter your weight">
+                    </div>
+                </div>
+
+                <div id="receiverFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="medical_condition">Medical Condition</label>
+                        <textarea id="medical_condition" name="medical_condition" placeholder="Describe your medical condition"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="urgency_level">Urgency Level</label>
+                        <select id="urgency_level" name="urgency_level">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Register
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Creating account...</p>
+            </div>
+
+            <p style="text-align: center; margin-top: 20px; color: var(--text-gray);">
+                Already have an account? 
+                <a href="login.html" style="color: var(--blood-red); text-decoration: none;">Login here</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const roleSelect = document.getElementById('role');
+        const donorFields = document.getElementById('donorFields');
+        const receiverFields = document.getElementById('receiverFields');
+        const registerForm = document.getElementById('registerForm');
+        const alertDiv = document.getElementById('alert');
+        const loading = document.getElementById('loading');
+
+        // Show/hide fields based on role
+        roleSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'donor') {
+                donorFields.style.display = 'block';
+                receiverFields.style.display = 'none';
+            } else if (e.target.value === 'receiver') {
+                donorFields.style.display = 'none';
+                receiverFields.style.display = 'block';
+            } else {
+                donorFields.style.display = 'none';
+                receiverFields.style.display = 'none';
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                role: document.getElementById('role').value,
+                full_name: document.getElementById('full_name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                phone: document.getElementById('phone').value,
+                blood_type: document.getElementById('blood_type').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value
+            };
+
+            if (formData.role === 'donor') {
+                formData.weight = document.getElementById('weight').value;
+            } else if (formData.role === 'receiver') {
+                formData.medical_condition = document.getElementById('medical_condition').value;
+                formData.urgency_level = document.getElementById('urgency_level').value;
+            }
+
+            registerForm.style.display = 'none';
+            loading.classList.add('show');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    showAlert('Registration successful! Redirecting...', 'success');
+
+                    setTimeout(() => {
+                        if (data.user.role === 'donor') {
+                            window.location.href = 'donor/dashboard.html';
+                        } else if (data.user.role === 'receiver') {
+                            window.location.href = 'receiver/dashboard.html';
+                        }
+                    }, 1000);
+                } else {
+                    showAlert(data.error || 'Registration failed', 'error');
+                    registerForm.style.display = 'block';
+                    loading.classList.remove('show');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.', 'error');
+                registerForm.style.display = 'block';
+                loading.classList.remove('show');
+            }
+        });
+
+        function showAlert(message, type) {
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

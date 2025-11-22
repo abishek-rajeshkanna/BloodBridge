@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request History - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="request_blood.html">Request Blood</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Request History </h1>
+            <p style="color: var(--text-gray);">Track all your blood requests</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Requests</div>
+                <div class="stat-number" id="totalRequests">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Units Received</div>
+                <div class="stat-number" id="unitsReceived">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Request</div>
+                <div class="stat-number" style="font-size: 20px;" id="lastRequest">Never</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-number" style="font-size: 28px;" id="successRate">0%</div>
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="card">
+            <h2 class="card-title">All Requests</h2>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Loading history...</p>
+            </div>
+
+            <div class="table-container" id="historyTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Blood Type</th>
+                            <th>Units</th>
+                            <th>Source</th>
+                            <th>Donor</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" style="display: none; text-align: center; padding: 40px;">
+                <h3 style="color: var(--blood-red); margin-bottom: 10px;">No Requests Yet</h3>
+                <p style="color: var(--text-gray); margin-bottom: 20px;">
+                    Make your first blood request when you need it
+                </p>
+                <a href="request.html" class="btn btn-primary">Request Blood</a>
+            </div>
+        </div>
+
+        <!-- Thank You Message -->
+        <div class="card" style="margin-top: 30px; text-align: center; background: linear-gradient(135deg, var(--dark-red), var(--blood-red));">
+            <h2 style="color: white; margin-bottom: 20px;"> Thank You to Our Donors</h2>
+            <p style="color: white; font-size: 18px; line-height: 1.8;">
+                Every blood donation is a gift of life.<br>
+                We're grateful for the generous donors who make recovery possible.
+            </p>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('receiver');
+
+        async function loadHistory() {
+            const result = await apiCall('/receiver/history');
+            document.getElementById('loading').classList.remove('show');
+
+            if (result.ok) {
+                const transactions = result.data;
+                
+                if (transactions.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                } else {
+                    const tbody = document.getElementById('historyBody');
+                    tbody.innerHTML = transactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.transaction_date).toLocaleDateString()}</td>
+                            <td><span class="blood-badge">${t.blood_type}</span></td>
+                            <td>${t.units}</td>
+                            <td><span class="status-badge status-${t.transaction_type === 'direct' ? 'approved' : 'completed'}">${t.transaction_type === 'direct' ? 'Direct Donor' : 'Inventory'}</span></td>
+                            <td>${t.donor_id ? `Donor #${t.donor_id}` : 'Blood Bank'}</td>
+                            <td>${t.notes || '-'}</td>
+                        </tr>
+                    `).join('');
+                    
+                    document.getElementById('historyTable').style.display = 'block';
+                    
+                    // Update stats
+                    const totalUnits = transactions.reduce((sum, t) => sum + t.units, 0);
+                    document.getElementById('totalRequests').textContent = transactions.length;
+                    document.getElementById('unitsReceived').textContent = totalUnits;
+                    
+                    if (transactions.length > 0) {
+                        const lastDate = new Date(transactions[transactions.length - 1].transaction_date);
+                        document.getElementById('lastRequest').textContent = lastDate.toLocaleDateString();
+                    }
+                    
+                    document.getElementById('successRate').textContent = '100%';
+                }
+            } else {
+                showAlert('Failed to load history', 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            setTimeout(() => alertDiv.classList.remove('show'), 5000);
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>

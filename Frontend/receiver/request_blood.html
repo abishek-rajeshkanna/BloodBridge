@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Blood - BloodBridge</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">BloodBridge</div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="request_blood.html">Request Blood</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="margin: 30px 0;">
+            <h1 style="color: var(--blood-red);">Request Blood </h1>
+            <p style="color: var(--text-gray);">Submit your blood requirement</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Request Form -->
+        <div class="form-container" style="max-width: 600px;">
+            <h2>Blood Request Details</h2>
+            
+            <form id="requestForm">
+                <div class="form-group">
+                    <label for="units">Number of Units Required</label>
+                    <input type="number" id="units" name="units" value="1" min="1" max="5" required>
+                    <small style="color: var(--text-gray);">1 unit = approximately 450ml</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="urgency">Urgency Level</label>
+                    <select id="urgency" name="urgency" required>
+                        <option value="low">Low - Can wait</option>
+                        <option value="medium">Medium - Within a week</option>
+                        <option value="high">High - Within 2-3 days</option>
+                        <option value="critical">Critical - Immediate</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Reason for Request</label>
+                    <textarea id="reason" name="reason" rows="4" placeholder="Please describe why you need blood (surgery, medical condition, etc.)" required></textarea>
+                </div>
+
+                <div class="card" style="background: rgba(220, 20, 60, 0.1); border-color: var(--blood-red);">
+                    <p style="color: var(--text-gray); font-size: 14px; margin: 0;">
+                         Your request will be checked against available inventory first. If blood is not available in inventory, matching donors will be notified.
+                    </p>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                    Submit Request
+                </button>
+            </form>
+
+            <div class="loading" id="submitLoading">
+                <div class="spinner"></div>
+                <p>Processing request...</p>
+            </div>
+        </div>
+
+        <!-- Compatible Donors Info -->
+        <div class="card" style="margin-top: 30px;">
+            <h2 class="card-title">Available Blood Sources</h2>
+            
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Inventory Units</div>
+                    <div class="stat-number" id="inventoryUnits">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Compatible Donors</div>
+                    <div class="stat-number" id="donorCount">-</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+                    View Donors & Inventory
+                </button>
+            </div>
+        </div>
+
+        <!-- Emergency Contact -->
+        <div class="card" style="margin-top: 30px; background: linear-gradient(135deg, var(--dark-red), var(--blood-red)); text-align: center;">
+            <h3 style="color: white; margin-bottom: 15px;">Emergency?</h3>
+            <p style="color: white; margin-bottom: 20px;">
+                For critical emergencies, please contact our 24/7 helpline
+            </p>
+            <p style="color: white; font-size: 24px; font-weight: bold;">
+                 9876457458
+            </p>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        protectPage('receiver');
+
+        const requestForm = document.getElementById('requestForm');
+        const submitLoading = document.getElementById('submitLoading');
+
+        // Load available sources
+        async function loadSources() {
+            const inventoryResult = await apiCall('/receiver/inventory-check');
+            if (inventoryResult.ok) {
+                const totalUnits = inventoryResult.data.reduce((sum, inv) => sum + inv.units_available, 0);
+                document.getElementById('inventoryUnits').textContent = totalUnits;
+            }
+
+            const donorsResult = await apiCall('/receiver/matching-donors');
+            if (donorsResult.ok) {
+                document.getElementById('donorCount').textContent = donorsResult.data.length;
+            }
+        }
+
+        requestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                units: parseInt(document.getElementById('units').value),
+                urgency: document.getElementById('urgency').value,
+                reason: document.getElementById('reason').value
+            };
+
+            requestForm.style.display = 'none';
+            submitLoading.classList.add('show');
+
+            const result = await apiCall('/receiver/request-blood', 'POST', formData);
+
+            submitLoading.classList.remove('show');
+
+            if (result.ok) {
+                showAlert(result.data.message, 'success');
+                
+                if (result.data.transaction) {
+                    showAlert('Blood request fulfilled from inventory! ', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'history.html';
+                    }, 2000);
+                } else {
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 3000);
+                }
+            } else {
+                showAlert(result.data.error || 'Request failed', 'error');
+                requestForm.style.display = 'block';
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type} show`;
+            window.scrollTo(0, 0);
+            setTimeout(() => alertDiv.classList.remove('show'), 5000);
+        }
+
+        loadSources();
+    </script>
+</body>
+</html>
