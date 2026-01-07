@@ -637,22 +637,8 @@ CREATE TABLE transactions (
 ### Entity Relationship Diagram
 
 ```
-┌─────────────┐         ┌──────────────┐
-│    Users    │◄────────│    Donors    │
-└─────────────┘         └──────────────┘
-      │                        │
-      │                        │
-      │                        ▼
-      │                 ┌──────────────┐
-      │                 │ Blood        │
-      │                 │ Inventory    │
-      │                 └──────────────┘
-      │                        │
-      │                        │
-      ▼                        ▼
-┌─────────────┐         ┌──────────────┐
-│  Receivers  │────────►│Transactions  │
-└─────────────┘         └──────────────┘
+<img width="421" height="321" alt="Untitled Diagram drawio" src="https://github.com/user-attachments/assets/43ec1356-c9fb-4a24-8149-9a6422626477" />
+
 ```
 
 ---
